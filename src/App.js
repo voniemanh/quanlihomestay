@@ -8,26 +8,81 @@ const guests = [
   { id: 5, guestName: "Daniel Wilson", phone: "0945678901", email: "daniel.wilson@example.com" },
 ];
 
-const homestayData = [
-  { id: 1, homestayName: "Sunrise Retreat", price: 850000, address: "123 Beach Road, Nha Trang", roomNo: 3, guestName: "", rentalCount: 0 },
-  { id: 2, homestayName: "Mountain Breeze Villa", price: 1200000, address: "45 Ly Thuong Kiet St, Da Lat", roomNo: 5, guestName: "", rentalCount: 0 },
-  { id: 3, homestayName: "Riverside Nest", price: 750000, address: "78 Nguyen Du St, Hoi An", roomNo: 2, guestName: "", rentalCount: 0 },
-  { id: 4, homestayName: "Palm Garden House", price: 980000, address: "12 Tran Hung Dao St, Phu Quoc", roomNo: 4, guestName: "", rentalCount: 0 },
-  { id: 5, homestayName: "Skyline Studio", price: 1100000, address: "89 Le Loi St, Da Nang", roomNo: 1, guestName: "", rentalCount: 0 },
+const initialData = [
+  {
+    id: 1,
+    homestayName: "Sunrise Retreat",
+    price: 850000,
+    address: "123 Beach Road, Nha Trang",
+    roomNo: 3,
+    guestName: "",
+    rentalCount: 0,
+    guestId: 1,
+  },
+  {
+    id: 2,
+    homestayName: "Ocean Breeze Villa",
+    price: 950000,
+    address: "45 Tran Phu, Da Nang",
+    roomNo: 2,
+    guestName: "",
+    rentalCount: 0,
+    guestId: 2,
+  },
+  {
+    id: 3,
+    homestayName: "Mountain View Lodge",
+    price: 750000,
+    address: "88 Hilltop Road, Da Lat",
+    roomNo: 4,
+    guestName: "",
+    rentalCount: 0,
+    guestId: 3,
+  },
+  {
+    id: 4,
+    homestayName: "Riverside Cottage",
+    price: 650000,
+    address: "12 Riverside Street, Hoi An",
+    roomNo: 1,
+    guestName: "",
+    rentalCount: 0,
+    guestId: 4,
+  },
+  {
+    id: 5,
+    homestayName: "City Lights Studio",
+    price: 700000,
+    address: "789 Le Loi, Ho Chi Minh City",
+    roomNo: 2,
+    guestName: "",
+    rentalCount: 0,
+    guestId: 5,
+  },
 ];
 
 function App() {
-  const [homestays, setHomestays] = useState(homestayData);
+  const [homestays, setHomestays] = useState(initialData);
+  const [originalData, setOriginalData] = useState(initialData);
   const [filters, setFilters] = useState({ homestayName: "", price: "", address: "", roomNo: "" });
   const [sortAsc, setSortAsc] = useState(true);
+  const [newHomestay, setNewHomestay] = useState({
+    homestayName: "",
+    price: "",
+    address: "",
+    roomNo: "",
+    guestId: "",
+  });
 
   const handleSearch = () => {
-    const filtered = homestayData.filter((item) =>
-      item.homestayName.toLowerCase().includes(filters.homestayName.toLowerCase()) &&
-      item.address.toLowerCase().includes(filters.address.toLowerCase()) &&
-      (filters.price === "" || item.price === Number(filters.price)) &&
-      (filters.roomNo === "" || item.roomNo === Number(filters.roomNo))
-    );
+    const filtered = homestays.filter((item) => {
+      return (
+        item.homestayName.toLowerCase().includes(filters.homestayName.toLowerCase()) &&
+        item.address.toLowerCase().includes(filters.address.toLowerCase()) &&
+        (filters.price === "" || item.price === Number(filters.price)) &&
+        (filters.roomNo === "" || item.roomNo === Number(filters.roomNo))
+      );
+    });
     setHomestays(filtered);
   };
 
@@ -40,11 +95,12 @@ function App() {
   };
 
   const handleReset = () => {
-    const updated = homestayData.map((item) => {
-      const existing = homestays.find((h) => h.id === item.id);
+    const updated = originalData.map((item) => {
+      const current = homestays.find((h) => h.id === item.id);
       return {
         ...item,
-        rentalCount: existing ? existing.rentalCount : 0,
+        rentalCount: current ? current.rentalCount : 0,
+        guestName: current ? current.guestName : "",
       };
     });
     setHomestays(updated);
@@ -77,17 +133,49 @@ function App() {
     setHomestays(updated);
   };
 
+  const handleAddHomestay = () => {
+    const { homestayName, price, address, roomNo } = newHomestay;
+    if (!homestayName || !price || !address || !roomNo) {
+      alert("Vui lòng nhập đầy đủ thông tin!");
+      return;
+    }
+
+    const newItem = {
+      id: homestays.length + 1,
+      homestayName,
+      price: Number(price),
+      address,
+      roomNo: Number(roomNo),
+      guestName: "",
+      rentalCount: 0,
+    };
+
+    const updatedList = [...homestays, newItem];
+    const updatedOriginal = [...originalData, newItem];
+
+    setHomestays(updatedList);
+    setOriginalData(updatedOriginal);
+    setNewHomestay({ homestayName: "", price: "", address: "", roomNo: "" });
+  };
+
   return (
     <>
       <h1>Guests List</h1>
       <Guests guests={guests} />
+
+      <h2>Add New Homestay</h2>
+      <AddHomestay
+        newHomestay={newHomestay}
+        setNewHomestay={setNewHomestay}
+        handleAddHomestay={handleAddHomestay}
+        guests={guests}
+      />
 
       <h1>Homestay's Rooms List</h1>
       <Search
         filters={filters}
         setFilters={setFilters}
         handleSearch={handleSearch}
-        handleReset={handleReset}
       />
       <Sort handleSort={handleSort} sortAsc={sortAsc} />
       <Reset handleReset={handleReset} />
@@ -95,6 +183,7 @@ function App() {
         homestays={homestays}
         onRental={handleRental}
         onCheckout={handleCheckout}
+        guests={guests}
       />
     </>
   );
@@ -125,19 +214,19 @@ function Guests({ guests }) {
   );
 }
 
-function Homestays({ homestays, onRental, onCheckout }) {
+function Homestays({ homestays, onRental, onCheckout}) {
   return (
     <table border={1}>
       <thead>
         <tr>
           <th>ID</th>
           <th>Homestay Name</th>
-          <th>Price (VND)</th>
+          <th>Price</th>
           <th>Address</th>
-          <th>Room's No</th>
+          <th>Room No</th>
           <th>Guest Name</th>
           <th>Rental Count</th>
-          <th>Actions</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -154,7 +243,7 @@ function Homestays({ homestays, onRental, onCheckout }) {
               {!home.guestName ? (
                 <button onClick={() => onRental(home.id)}>Rental</button>
               ) : (
-                <button onClick={() => onCheckout(home.id)}>Trả phòng</button>
+                <button onClick={() => onCheckout(home.id)}>Check out</button>
               )}
             </td>
           </tr>
@@ -171,28 +260,10 @@ function Search({ filters, setFilters, handleSearch }) {
 
   return (
     <>
-      <input
-        placeholder="Homestay Name"
-        value={filters.homestayName}
-        onChange={handleChange("homestayName")}
-      />
-      <input
-        placeholder="Homestay Price"
-        type="number"
-        value={filters.price}
-        onChange={handleChange("price")}
-      />
-      <input
-        placeholder="Homestay Address"
-        value={filters.address}
-        onChange={handleChange("address")}
-      />
-      <input
-        placeholder="Room No"
-        type="number"
-        value={filters.roomNo}
-        onChange={handleChange("roomNo")}
-      />
+      <input placeholder="Homestay Name" value={filters.homestayName} onChange={handleChange("homestayName")} />
+      <input placeholder="Price" type="number" value={filters.price} onChange={handleChange("price")} />
+      <input placeholder="Address" value={filters.address} onChange={handleChange("address")} />
+      <input placeholder="Room No" type="number" value={filters.roomNo} onChange={handleChange("roomNo")} />
       <button onClick={handleSearch}>Search</button>
     </>
   );
@@ -204,6 +275,22 @@ function Sort({ handleSort, sortAsc }) {
 
 function Reset({ handleReset }) {
   return <button onClick={handleReset}>Reset</button>;
+}
+
+function AddHomestay({ newHomestay, setNewHomestay, handleAddHomestay}) {
+  const handleChange = (field) => (e) => {
+    setNewHomestay({ ...newHomestay, [field]: e.target.value });
+  };
+
+  return (
+    <>
+      <input placeholder="Homestay Name" value={newHomestay.homestayName} onChange={handleChange("homestayName")} />
+      <input placeholder="Price" type="number" value={newHomestay.price} onChange={handleChange("price")} />
+      <input placeholder="Address" value={newHomestay.address} onChange={handleChange("address")} />
+      <input placeholder="Room No" type="number" value={newHomestay.roomNo} onChange={handleChange("roomNo")} />
+      <button onClick={handleAddHomestay}>Add Homestay</button>
+    </>
+  );
 }
 
 export default App;
