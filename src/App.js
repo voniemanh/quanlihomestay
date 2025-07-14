@@ -22,28 +22,32 @@ function App() {
   const [sortAsc, setSortAsc] = useState(true);
 
   const handleSearch = () => {
-    const filtered = homestayData.filter((item) => {
-      return (
-        item.homestayName.toLowerCase().includes(filters.homestayName.toLowerCase()) &&
-        item.address.toLowerCase().includes(filters.address.toLowerCase()) &&
-        (filters.price === "" || item.price === Number(filters.price)) &&
-        (filters.roomNo === "" || item.roomNo === Number(filters.roomNo))
-      );
-    });
+    const filtered = homestayData.filter((item) =>
+      item.homestayName.toLowerCase().includes(filters.homestayName.toLowerCase()) &&
+      item.address.toLowerCase().includes(filters.address.toLowerCase()) &&
+      (filters.price === "" || item.price === Number(filters.price)) &&
+      (filters.roomNo === "" || item.roomNo === Number(filters.roomNo))
+    );
     setHomestays(filtered);
   };
 
   const handleSort = () => {
-  const sorted = [...homestays].sort((a, b) =>
-    sortAsc ? a.price - b.price : b.price - a.price
-  );
-  setHomestays(sorted);
-  setSortAsc(!sortAsc); 
-};
-
+    const sorted = [...homestays].sort((a, b) =>
+      sortAsc ? a.price - b.price : b.price - a.price
+    );
+    setHomestays(sorted);
+    setSortAsc(!sortAsc);
+  };
 
   const handleReset = () => {
-    setHomestays(homestayData);
+    const updated = homestayData.map((item) => {
+      const existing = homestays.find((h) => h.id === item.id);
+      return {
+        ...item,
+        rentalCount: existing ? existing.rentalCount : 0,
+      };
+    });
+    setHomestays(updated);
     setFilters({ homestayName: "", price: "", address: "", roomNo: "" });
   };
 
@@ -51,10 +55,17 @@ function App() {
     const guestName = prompt("Nhập tên khách:");
     if (!guestName) return;
 
+    const guestExists = guests.some(
+      (guest) => guest.guestName.toLowerCase() === guestName.trim().toLowerCase()
+    );
+
+    if (!guestExists) {
+      alert("Khách không tồn tại trong danh sách! Vui lòng kiểm tra lại.");
+      return;
+    }
+
     const updated = homestays.map((h) =>
-      h.id === id
-        ? { ...h, guestName, rentalCount: h.rentalCount + 1 }
-        : h
+      h.id === id ? { ...h, guestName, rentalCount: h.rentalCount + 1 } : h
     );
     setHomestays(updated);
   };
@@ -79,8 +90,12 @@ function App() {
         handleReset={handleReset}
       />
       <Sort handleSort={handleSort} sortAsc={sortAsc} />
-      <Reset handleReset={handleReset}/>
-      <Homestays homestays={homestays} onRental={handleRental} onCheckout={handleCheckout} />
+      <Reset handleReset={handleReset} />
+      <Homestays
+        homestays={homestays}
+        onRental={handleRental}
+        onCheckout={handleCheckout}
+      />
     </>
   );
 }
@@ -136,10 +151,9 @@ function Homestays({ homestays, onRental, onCheckout }) {
             <td>{home.guestName || "-"}</td>
             <td>{home.rentalCount}</td>
             <td>
-              {!home.guestName && (
+              {!home.guestName ? (
                 <button onClick={() => onRental(home.id)}>Rental</button>
-              )}
-              {home.guestName && (
+              ) : (
                 <button onClick={() => onCheckout(home.id)}>Trả phòng</button>
               )}
             </td>
@@ -150,44 +164,46 @@ function Homestays({ homestays, onRental, onCheckout }) {
   );
 }
 
-function Search({ filters, setFilters, handleSearch, handleReset }) {
+function Search({ filters, setFilters, handleSearch }) {
+  const handleChange = (key) => (e) => {
+    setFilters({ ...filters, [key]: e.target.value });
+  };
+
   return (
     <>
       <input
         placeholder="Homestay Name"
         value={filters.homestayName}
-        onChange={(e) => setFilters({ ...filters, homestayName: e.target.value })}
+        onChange={handleChange("homestayName")}
       />
       <input
         placeholder="Homestay Price"
         type="number"
         value={filters.price}
-        onChange={(e) => setFilters({ ...filters, price: e.target.value })}
+        onChange={handleChange("price")}
       />
       <input
         placeholder="Homestay Address"
         value={filters.address}
-        onChange={(e) => setFilters({ ...filters, address: e.target.value })}
+        onChange={handleChange("address")}
       />
       <input
         placeholder="Room No"
         type="number"
         value={filters.roomNo}
-        onChange={(e) => setFilters({ ...filters, roomNo: e.target.value })}
+        onChange={handleChange("roomNo")}
       />
       <button onClick={handleSearch}>Search</button>
     </>
   );
 }
 
-function Sort({ handleSort,sortAsc }) {
+function Sort({ handleSort, sortAsc }) {
   return <button onClick={handleSort}>Sort by Price {sortAsc ? "↑" : "↓"}</button>;
 }
 
-function Reset({handleReset}){
- return(
-  <button onClick={handleReset}>Reset</button>
- )
+function Reset({ handleReset }) {
+  return <button onClick={handleReset}>Reset</button>;
 }
 
 export default App;
