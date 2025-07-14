@@ -17,7 +17,6 @@ const initialData = [
     roomNo: 3,
     guestName: "",
     rentalCount: 0,
-    guestId: 1,
   },
   {
     id: 2,
@@ -27,7 +26,6 @@ const initialData = [
     roomNo: 2,
     guestName: "",
     rentalCount: 0,
-    guestId: 2,
   },
   {
     id: 3,
@@ -37,7 +35,6 @@ const initialData = [
     roomNo: 4,
     guestName: "",
     rentalCount: 0,
-    guestId: 3,
   },
   {
     id: 4,
@@ -47,7 +44,6 @@ const initialData = [
     roomNo: 1,
     guestName: "",
     rentalCount: 0,
-    guestId: 4,
   },
   {
     id: 5,
@@ -57,7 +53,6 @@ const initialData = [
     roomNo: 2,
     guestName: "",
     rentalCount: 0,
-    guestId: 5,
   },
 ];
 
@@ -71,20 +66,19 @@ function App() {
     price: "",
     address: "",
     roomNo: "",
-    guestId: "",
   });
 
   const handleSearch = () => {
-    const filtered = homestays.filter((item) => {
-      return (
-        item.homestayName.toLowerCase().includes(filters.homestayName.toLowerCase()) &&
-        item.address.toLowerCase().includes(filters.address.toLowerCase()) &&
-        (filters.price === "" || item.price === Number(filters.price)) &&
-        (filters.roomNo === "" || item.roomNo === Number(filters.roomNo))
-      );
-    });
-    setHomestays(filtered);
-  };
+  const filtered = originalData.filter((item) => {
+    return (
+      (!filters.homestayName || item.homestayName.toLowerCase().includes(filters.homestayName.toLowerCase())) &&
+      (!filters.address || item.address.toLowerCase().includes(filters.address.toLowerCase())) &&
+      (!filters.price || item.price === Number(filters.price)) &&
+      (!filters.roomNo || item.roomNo === Number(filters.roomNo))
+    );
+  });
+  setHomestays(filtered);
+};
 
   const handleSort = () => {
     const sorted = [...homestays].sort((a, b) =>
@@ -105,25 +99,6 @@ function App() {
     });
     setHomestays(updated);
     setFilters({ homestayName: "", price: "", address: "", roomNo: "" });
-  };
-
-  const handleRental = (id) => {
-    const guestName = prompt("Nhập tên khách:");
-    if (!guestName) return;
-
-    const guestExists = guests.some(
-      (guest) => guest.guestName.toLowerCase() === guestName.trim().toLowerCase()
-    );
-
-    if (!guestExists) {
-      alert("Khách không tồn tại trong danh sách! Vui lòng kiểm tra lại.");
-      return;
-    }
-
-    const updated = homestays.map((h) =>
-      h.id === id ? { ...h, guestName, rentalCount: h.rentalCount + 1 } : h
-    );
-    setHomestays(updated);
   };
 
   const handleCheckout = (id) => {
@@ -168,7 +143,6 @@ function App() {
         newHomestay={newHomestay}
         setNewHomestay={setNewHomestay}
         handleAddHomestay={handleAddHomestay}
-        guests={guests}
       />
 
       <h1>Homestay's Rooms List</h1>
@@ -181,7 +155,7 @@ function App() {
       <Reset handleReset={handleReset} />
       <Homestays
         homestays={homestays}
-        onRental={handleRental}
+        setHomestays={setHomestays}
         onCheckout={handleCheckout}
         guests={guests}
       />
@@ -214,7 +188,32 @@ function Guests({ guests }) {
   );
 }
 
-function Homestays({ homestays, onRental, onCheckout}) {
+function Homestays({ homestays, setHomestays, onCheckout, guests }) {
+  const [selectingRentalId, setSelectingRentalId] = useState(null);
+  const [selectedGuestId, setSelectedGuestId] = useState(null);
+
+  const handleRental = (id) => {
+    setSelectingRentalId(id);
+    setSelectedGuestId(null);
+  };
+
+  const handleConfirmRental = (id) => {
+    if (!selectedGuestId) {
+      alert("Vui lòng chọn khách!");
+      return;
+    }
+
+    const selectedGuest = guests.find((g) => g.id === Number(selectedGuestId));
+    const updated = homestays.map((h) =>
+      h.id === id
+        ? { ...h, guestName: selectedGuest.guestName, rentalCount: h.rentalCount + 1 }
+        : h
+    );
+    setHomestays(updated);
+    setSelectingRentalId(null);
+    setSelectedGuestId(null);
+  };
+
   return (
     <table border={1}>
       <thead>
@@ -237,11 +236,34 @@ function Homestays({ homestays, onRental, onCheckout}) {
             <td>{home.price.toLocaleString()}</td>
             <td>{home.address}</td>
             <td>{home.roomNo}</td>
-            <td>{home.guestName || "-"}</td>
+            <td>
+              {selectingRentalId === home.id ? (
+                <select
+                  value={selectedGuestId || ""}
+                  onChange={(e) => setSelectedGuestId(e.target.value)}
+                >
+                  <option value="">-- Chọn khách --</option>
+                  {guests.map((guest) => (
+                    <option key={guest.id} value={guest.id}>
+                      {guest.guestName}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                home.guestName || "-"
+              )}
+            </td>
             <td>{home.rentalCount}</td>
             <td>
               {!home.guestName ? (
-                <button onClick={() => onRental(home.id)}>Rental</button>
+                selectingRentalId === home.id ? (
+                  <>
+                    <button onClick={() => handleConfirmRental(home.id)}>Confirm</button>
+                    <button onClick={() => setSelectingRentalId(null)}>Cancel</button>
+                  </>
+                ) : (
+                  <button onClick={() => handleRental(home.id)}>Rental</button>
+                )
               ) : (
                 <button onClick={() => onCheckout(home.id)}>Check out</button>
               )}
@@ -277,7 +299,7 @@ function Reset({ handleReset }) {
   return <button onClick={handleReset}>Reset</button>;
 }
 
-function AddHomestay({ newHomestay, setNewHomestay, handleAddHomestay}) {
+function AddHomestay({ newHomestay, setNewHomestay, handleAddHomestay }) {
   const handleChange = (field) => (e) => {
     setNewHomestay({ ...newHomestay, [field]: e.target.value });
   };
